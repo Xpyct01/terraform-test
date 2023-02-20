@@ -17,7 +17,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "var.aws_region"
+  region = var.aws_region
 }
 
 resource "random_pet" "lambda_bucket_name" {
