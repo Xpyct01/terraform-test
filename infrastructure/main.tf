@@ -58,7 +58,7 @@ resource "aws_lambda_function" "sg_demo" {
   s3_key    = aws_s3_object.lambda_sg_demo.key
 
   runtime = "python3.9"
-  handler = "index.lambda_handler"
+  handler = "main.lambda_handler"
 
   source_code_hash = data.archive_file.lambda_sg_demo.output_base64sha256
 
