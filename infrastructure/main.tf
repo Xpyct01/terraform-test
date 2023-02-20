@@ -38,8 +38,8 @@ resource "aws_s3_bucket_acl" "lambda_bucket_acl" {
 data "archive_file" "lambda_sg_demo" {
   type = "zip"
 
-  source_dir  = "${path.module}/sg-demo"
-  output_path = "${path.module}/sg-demo.zip"
+  source_dir  = "${path.module}/../sg-demo"
+  output_path = "${path.module}/../sg-demo.zip"
 }
 
 resource "aws_s3_object" "lambda_sg_demo" {
