@@ -44,7 +44,7 @@ resource "aws_iam_policy" "kms-cross-account-policy" {
       {
         Effect = "Allow",
         Principal = {
-          AWS = [aws_iam_role.codepipeline-role.arn, var.iam_admin_user_arn]
+          AWS = [var.codepipeline-role-arn, var.iam_admin_user_arn]
         },
         Action = [
           "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey"
@@ -54,7 +54,7 @@ resource "aws_iam_policy" "kms-cross-account-policy" {
       {
         Effect = "Allow",
         Principal = {
-          AWS = [aws_iam_role.codepipeline-role.arn, var.iam_admin_user_arn]
+          AWS = [var.codepipeline-role-arn, var.iam_admin_user_arn]
         },
         Action = [
           "kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"
