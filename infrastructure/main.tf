@@ -17,7 +17,7 @@ data "aws_caller_identity" "current" {}
 data "aws_iam_policy_document" "kms-cross-account-policy" {
   statement {
     principals {
-      identifiers = ["arn:aws:iam::918914117713:root"]
+      identifiers = [data.aws_caller_identity.current.account_id]
       type = "AWS"
     }
     actions = ["kms:*"]
