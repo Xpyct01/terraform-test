@@ -49,9 +49,9 @@ data "aws_iam_policy_document" "kms-cross-account-policy" {
     actions = ["kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"]
     resources = ["*"]
     condition {
-      test     = "kms:GrantIsForAWSResource"
-      values   = ["true"]
-      variable = "Bool"
+      test     = "Bool"
+      values   = [true]
+      variable = "kms:GrantIsForAWSResource"
     }
   }
 }
