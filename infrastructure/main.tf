@@ -14,58 +14,49 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_iam_policy_document" "kms-cross-account-policy" {
+  statement {
+    principals {
+      identifiers = ["arn:aws:iam::918914117713:root"]
+      type = "AWS"
+    }
+    actions = ["kms:*"]
+    resources = ["*"]
+  }
+  statement {
+    principals {
+      identifiers = ["arn:aws:iam::918914117713:user/dev"]
+      type = "AWS"
+    }
+    actions = ["kms:Create*", "kms:Describe*", "kms:Enable*", "kms:List*", "kms:Put*", "kms:Update*",
+                "kms:Revoke*", "kms:Disable*", "kms:Get*", "kms:Delete*", "kms:TagResource",
+                "kms:UntagResource", "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion"]
+    resources = ["*"]
+  }
+  statement {
+    principals {
+      identifiers = [var.codepipeline-role-arn, var.iam_admin_user_arn]
+      type = "AWS"
+    }
+    actions = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey"]
+    resources = ["*"]
+  }
+  statement {
+    principals {
+      identifiers = [var.codepipeline-role-arn, var.iam_admin_user_arn]
+      type = "AWS"
+    }
+    actions = ["kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"]
+    resources = ["*"]
+    condition {
+      test     = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+      variable = "Bool"
+    }
+  }
+}
+
 resource "aws_iam_policy" "kms-cross-account-policy" {
-  name = "iris-kms-cross-account-policy"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          AWS = [
-            data.aws_caller_identity.current.account_id
-          ]
-        },
-        Action = "kms:*",
-        Resource = "*"
-      },
-      {
-        Effect = "Allow",
-        Principal = {
-          AWS = var.iam_user_arn
-        },
-        Action = [
-          "kms:Create*", "kms:Describe*", "kms:Enable*", "kms:List*", "kms:Put*", "kms:Update*", "kms:Revoke*",
-          "kms:Disable*", "kms:Get*", "kms:Delete*", "kms:TagResource", "kms:UntagResource",
-          "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow",
-        Principal = {
-          AWS = [var.codepipeline-role-arn, var.iam_admin_user_arn]
-        },
-        Action = [
-          "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey"
-        ],
-        Resource = "*"
-      },
-      {
-        Effect = "Allow",
-        Principal = {
-          AWS = [var.codepipeline-role-arn, var.iam_admin_user_arn]
-        },
-        Action = [
-          "kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"
-        ],
-        Resource = "*",
-        Condition = {
-          Bool = {
-            "kms:GrantIsForAWSResource": "true"
-          }
-        }
-      }
-    ]
-  })
+  name   = "kms-cross-account-policy"
+  policy = data.aws_iam_policy_document.kms-cross-account-policy.json
 }
