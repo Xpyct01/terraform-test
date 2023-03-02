@@ -4,91 +4,68 @@ terraform {
       source = "hashicorp/aws"
       version = "~> 4.16"
     }
-    random = {
-      source = "hashicorp/random"
-      version = "~> 3.1.0"
-    }
-    archive = {
-      source = "hashicorp/archive"
-      version = "~> 2.2.0"
-    }
   }
   required_version = ">=1.2.0"
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-2"
 }
 
-resource "random_pet" "lambda_bucket_name" {
-  prefix = "sg-terraform-demo"
-  length = 4
-}
+data "aws_caller_identity" "current" {}
 
-resource "aws_s3_bucket" "lambda_bucket" {
-  bucket = random_pet.lambda_bucket_name.id
-  force_destroy = true
-}
-
-resource "aws_s3_bucket_acl" "lambda_bucket_acl" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-  acl    = "private"
-}
-
-data "archive_file" "lambda_sg_demo" {
-  type = "zip"
-
-  source_dir  = "${path.module}/../sg-demo"
-  output_path = "${path.module}/../sg-demo.zip"
-}
-
-resource "aws_s3_object" "lambda_sg_demo" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-
-  key    = "sg-demo.zip"
-  source = data.archive_file.lambda_sg_demo.output_path
-
-  etag = filemd5(data.archive_file.lambda_sg_demo.output_path)
-}
-
-resource "aws_lambda_function" "sg_demo" {
-  function_name = "SGDemo"
-
-  s3_bucket = aws_s3_bucket.lambda_bucket.id
-  s3_key    = aws_s3_object.lambda_sg_demo.key
-
-  runtime = "python3.9"
-  handler = "main.lambda_handler"
-
-  source_code_hash = data.archive_file.lambda_sg_demo.output_base64sha256
-
-  role = aws_iam_role.lambda_exec.arn
-}
-
-resource "aws_cloudwatch_log_group" "sg_demo" {
-  name = "/aws/lambda/${aws_lambda_function.sg_demo.function_name}"
-
-  retention_in_days = 30
-}
-
-resource "aws_iam_role" "lambda_exec" {
-  name = "serverless_lambda"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Sid    = ""
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
+resource "aws_iam_policy" "kms-cross-account-policy" {
+  name = "iris-kms-cross-account-policy"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = [
+            data.aws_caller_identity.current.account_id
+          ]
+        },
+        Action = "kms:*",
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = var.iam_user_arn
+        },
+        Action = [
+          "kms:Create*", "kms:Describe*", "kms:Enable*", "kms:List*", "kms:Put*", "kms:Update*", "kms:Revoke*",
+          "kms:Disable*", "kms:Get*", "kms:Delete*", "kms:TagResource", "kms:UntagResource",
+          "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = [aws_iam_role.codepipeline-role.arn, var.iam_admin_user_arn]
+        },
+        Action = [
+          "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = [aws_iam_role.codepipeline-role.arn, var.iam_admin_user_arn]
+        },
+        Action = [
+          "kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"
+        ],
+        Resource = "*",
+        Condition = {
+          Bool = {
+            "kms:GrantIsForAWSResource": "true"
+          }
+        }
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_policy" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
