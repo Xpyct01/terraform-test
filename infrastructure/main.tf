@@ -14,19 +14,11 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-data "aws_iam_policy_document" "kms-cross-account-policy" {
-  statement {
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type = "AWS"
-    }
-    actions = ["kms:*"]
-    resources = ["*"]
-  }
+module "kms" {
+  source = "terraform-aws-modules/kms/aws"
 
-}
-
-resource "aws_iam_policy" "kms-cross-account-policy" {
-  name   = "kms-cross-account-policy"
-  policy = data.aws_iam_policy_document.kms-cross-account-policy.json
+  aliases = ["aboba-key"]
+  deletion_window_in_days = 7
+  key_owners = [data.aws_caller_identity.current.account_id]
+  key_administrators = [data.aws_caller_identity.current.account_id]
 }
